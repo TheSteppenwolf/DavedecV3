@@ -1,0 +1,16 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Conjunto de datos no válido" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            El conjunto de datos seleccionado no cumple con la nomenclatura correcta.<bt /><br/>
+            Recuerda que para el conjunto de datos, la nomenclatura estándar es la siguiente: <br /><br/>
+            SIGLASENTIDAD_NombreConjuntodatos_AñoMes<br /><br />
+            Por ejemplo: INEC_NombrePrueba_2022Septiembre<br /><br />
+            Modifica el nombre del conjunto de datos seleccionado para poder evaluarlo, pero, toma en cuenta las mayúsculas.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Cerrar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()"/>
+    </FooterTemplate>
+</HxModal>

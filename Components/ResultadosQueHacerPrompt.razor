@@ -1,0 +1,26 @@
+﻿<HxAlert Color="ThemeColor.Secondary">
+    <HxIcon Icon="BootstrapIcon.InfoCircleFill"/>
+    <strong>@Title</strong>
+    <span class="text-nowrap">
+        Conoce las funciones de esta sección y un poco más dando clic en          
+        <HxButton Color="ThemeColor.Secondary" OnClick="GetMasInformacion" Icon="BootstrapIcon.InfoCircle" IconPlacement="ButtonIconPlacement.End">Más información</HxButton>
+    </span>
+</HxAlert>
+
+@code {
+    // Demonstrates how a parent component can supply parameters
+    [Parameter]
+    public string Title { get; set; }
+    private string GuiaPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Datin Revisa",
+                "Guías",
+                "GuíaResultadosEvaluación.pdf");
+
+    public async void GetMasInformacion()
+    {
+        await Launcher.OpenAsync(new OpenFileRequest
+        {
+            File = new ReadOnlyFile(GuiaPath)
+        });
+    }
+}

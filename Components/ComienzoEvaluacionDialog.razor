@@ -1,0 +1,14 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Estado de la evaluación" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Primary">
+            La evaluación de los documentos ingresados va a comenzar, ¿Deseas continuar con esta acción?<br /><br/>
+            Puede demorar un poco...
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+        <HxButton Text="Cancelar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsync(-1)"/>
+    </FooterTemplate>
+</HxModal>

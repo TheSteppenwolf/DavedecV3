@@ -1,0 +1,18 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Formato no permitido" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            El documento seleccionado no es válido.<br/><br />
+            Unicamente se permiten los formatos: 
+            <ul>
+                <li>.xlsx</li>
+                <li>.ods</li>
+                <li>.csv</li>
+            </ul>
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Cerrar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

@@ -1,0 +1,13 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Faltan documentos" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            No has seleccionado todos los documentos requeridos.<br/><br />
+            Por favor, selecciona los documentos restantes.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Cerrar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()"/>
+    </FooterTemplate>
+</HxModal>

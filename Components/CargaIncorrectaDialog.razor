@@ -1,0 +1,13 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Error en carga de datos" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Danger">
+            El documento seleccionado no se ha podido cargar.<br /><br/>
+            Espera un momento y prueba nuevamente, o intenta seleccionar con otro documento.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

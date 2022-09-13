@@ -1,0 +1,16 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Diccionario de datos no válido" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            El diccionario de datos seleccionado no cumple con la nomenclatura correcta.<bt /><br />
+            Recuerda que para el diccionario de datos, la nomenclatura estándar es la siguiente: <br /><br />
+            SIGLASENTIDAD_NombreDelConjuntoDeDatos_DD_AñoMes<br /><br />
+            Por ejemplo: INEC_NombrePrueba_DD_2022Septiembre<br /><br />
+            Modifica el nombre del diccionario de datos seleccionado para poder evaluarlo, pero, toma en cuenta las mayúsculas.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Cerrar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

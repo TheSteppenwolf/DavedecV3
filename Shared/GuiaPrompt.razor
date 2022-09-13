@@ -1,0 +1,16 @@
+﻿<HxAlert Color="ThemeColor.Secondary">
+    <HxIcon Icon="BootstrapIcon.InfoCircleFill"/>
+    <strong>@Title</strong>
+
+    <span class="text-nowrap">
+        Te invitamos a revisar la
+        <a target="_blank" class="font-weight-bold link-dark" href="https://www.gobiernoelectronico.gob.ec/wp-content/uploads/2021/03/Guia-Datos-Abiertos-con-portada.pdf">Guía de Datos Abiertos</a>
+    </span>
+    para conocer más.
+</HxAlert>
+
+@code {
+    // Demonstrates how a parent component can supply parameters
+    [Parameter]
+    public string Title { get; set; }
+}

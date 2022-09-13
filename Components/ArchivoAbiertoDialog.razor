@@ -1,0 +1,13 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Archivo en uso o inválido" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Danger">
+            Hubo un error tratando de acceder a un documento.<br /><br />
+            Por favor, cierra los documentos por evaluar que tengas abiertos.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

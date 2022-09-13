@@ -1,0 +1,13 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="No se puede realizar la evaluación" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            Parece que no has seleccionado todos los documentos aun. <br /><br />
+            Por favor, ingresalos en la página de selección de archivos.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

@@ -1,0 +1,16 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Metadato no válido" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            El metadato seleccionado no cumple con la nomenclatura correcta.<bt /><br />
+            Recuerda que para los metadatos, la nomenclatura estándar es la siguiente:<br /><br />
+            SIGLASENTIDAD_NombreDelConjuntoDeDatos_PM_AñoMes<br /><br />
+            Por ejemplo: INEC_NombrePrueba_PM_2022Septiembre<br /><br />
+            Modifica el nombre del metadato seleccionado para poder evaluarlo, pero, toma en cuenta las mayúsculas.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Cerrar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

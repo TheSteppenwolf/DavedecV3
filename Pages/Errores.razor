@@ -1,0 +1,541 @@
+﻿@page "/errores/{TabId}"
+@page "/errores"
+@inherits LayoutComponentBase
+@using DavedecV3.Data
+@using DavedecV3.Models
+@using DavedecV3.Components
+@using System
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+<h3>Revisión de errores de los documentos</h3>
+En esta sección podrás revisar todos los errores reportados durante la evaluación de los documentos.
+<br/>
+<br />
+<ErroresQueHacerPrompt Title="¿No sabes qué hacer?" />
+<HxButton Color="ThemeColor.Primary" OnClick="RealizarEvaluacion" Icon="BootstrapIcon.CheckCircleFill" IconPlacement="ButtonIconPlacement.End">Realizar evaluación</HxButton>
+<br />
+<br />
+<HxProgressIndicator InProgress="@inProgress" />
+<HxTabPanel @bind-ActiveTabId="TabId">
+	<HxTab Id="ConjuntoDatos" Title="Conjunto de datos">
+		<Content>
+            <br /><strong>Listado de errores del Conjunto de datos</strong><br /><br/>
+            <strong>Nombre del documento:</strong> @Documentos.ConjuntoDatos.Nombre<br/>
+            <strong>Columnas del conjunto de datos:</strong> @Documentos.ConjuntoDatos.Columnas<br/><br/>
+            <HxButton Color="ThemeColor.Secondary" OnClick="CDAbrir" Icon="BootstrapIcon.Folder2Open" IconPlacement="ButtonIconPlacement.End">Abrir Conjunto de datos</HxButton>
+            <HxButton Color="ThemeColor.Secondary" OnClick="CDExportar" Icon="BootstrapIcon.Download" IconPlacement="ButtonIconPlacement.End">Exportar reporte de errores</HxButton>
+            <HxGrid TItem="Error" Responsive="true" DataProvider="CDErrorsProvider" @ref="CDgrid" Striped="true" MultiSelectionEnabled="true" PageSize="10">
+                <Columns>
+                    <HxGridColumn TItem="Error" HeaderText="Tipo de estadística" ItemTextSelector="@(item => item.Tipo)" SortKeySelector="@(item => item.Tipo)" IsDefaultSortColumn="true" />
+                    <HxGridColumn TItem="Error" HeaderText="Descripción" ItemTextSelector="@(item => item.Mensaje)" SortKeySelector="@(item => item.Mensaje)" />
+                    <HxGridColumn TItem="Error" HeaderText="Sugerencia" ItemTextSelector="@(item => item.Sugerencia)" SortKeySelector="@(item => item.Sugerencia)" />
+                    <HxGridColumn TItem="Error" HeaderText="Campo" ItemTextSelector="@(item => item.Campo)" SortKeySelector="@(item => item.Campo)" />
+                    <HxGridColumn TItem="Error" HeaderText="Reporte" ItemTextSelector="@(item => item.Contenido)" SortKeySelector="@(item => item.Campo)" />                    
+                    <HxContextMenuGridColumn TItem="Error" Context="item">
+                        <HxContextMenu>
+                            <HxContextMenuItem Text="Eliminar" Icon="BootstrapIcon.Trash" OnClick="() => CDDeleteItem(item)" />
+                        </HxContextMenu>
+                    </HxContextMenuGridColumn>
+                </Columns>
+            </HxGrid>
+        </Content>
+	</HxTab>
+	<HxTab Id="DiccionarioDatos">
+		<TitleTemplate>Diccionario de datos</TitleTemplate>
+		<Content> 
+            <br /><strong>Listado de errores del Diccionario de datos</strong><br /><br />
+            <strong>Nombre del documento:</strong> @Documentos.DiccionarioDatos.Nombre<br />
+            <strong>Cantidad de errores:</strong> @DDErrores.Count() <br /><br />
+            <HxButton Color="ThemeColor.Secondary" OnClick="DDAbrir" Icon="BootstrapIcon.Folder2Open" IconPlacement="ButtonIconPlacement.End">Abrir diccionario de datos</HxButton>
+            <HxButton Color="ThemeColor.Secondary" OnClick="DDExportar" Icon="BootstrapIcon.Download" IconPlacement="ButtonIconPlacement.End">Exportar reporte de errores</HxButton>
+            <HxGrid TItem="Error" Responsive="true" DataProvider="DDErrorsProvider" @ref="DDgrid" MultiSelectionEnabled="true" Striped="true" PageSize="10">
+                <Columns>
+                    <HxGridColumn TItem="Error" HeaderText="Tipo de error" ItemTextSelector="@(item => item.Tipo)" SortKeySelector="@(item => item.Tipo)" IsDefaultSortColumn="true" />
+                    <HxGridColumn TItem="Error" HeaderText="Descripción" ItemTextSelector="@(item => item.Mensaje)" SortKeySelector="@(item => item.Mensaje)" />
+                    <HxGridColumn TItem="Error" HeaderText="Sugerencia" ItemTextSelector="@(item => item.Sugerencia)" SortKeySelector="@(item => item.Sugerencia)" />
+                    <HxGridColumn TItem="Error" HeaderText="Campo" ItemTextSelector="@(item => item.Campo)" SortKeySelector="@(item => item.Campo)" />
+                    <HxGridColumn TItem="Error" HeaderText="Contenido" ItemTextSelector="@(item => item.Contenido)" SortKeySelector="@(item => item.Campo)" />
+                    <HxContextMenuGridColumn TItem="Error" Context="item">
+                        <HxContextMenu>
+                            <HxContextMenuItem Text="Eliminar" Icon="BootstrapIcon.Trash" OnClick="() => DDDeleteItem(item)" />
+                        </HxContextMenu>
+                    </HxContextMenuGridColumn>
+                </Columns>
+            </HxGrid>
+		</Content>
+	</HxTab>
+	<HxTab Id="Metadatos">
+		<TitleTemplate>Metadatos</TitleTemplate>
+        <Content>
+            <br /><strong>Listado de errores del Metadato</strong><br /><br/>
+            <strong>Nombre del documento:</strong> @Documentos.Metadatos.Nombre<br/>
+            <strong>Cantidad de errores:</strong> @PMErrores.Count() <br /><br/>
+            <HxButton Color="ThemeColor.Secondary" OnClick="PMAbrir" Icon="BootstrapIcon.Folder2Open" IconPlacement="ButtonIconPlacement.End">Abrir metadato</HxButton>
+            <HxButton Color="ThemeColor.Secondary" OnClick="PMExportar" Icon="BootstrapIcon.Download" IconPlacement="ButtonIconPlacement.End">Exportar reporte de errores</HxButton>
+            <HxGrid TItem="Error" Responsive="true" DataProvider="PMErrorsProvider" @ref="PMgrid" MultiSelectionEnabled="true" Striped="true" PageSize="10">
+                <Columns>
+                    <HxGridColumn TItem="Error" HeaderText="Tipo de error" ItemTextSelector="@(item => item.Tipo)" SortKeySelector="@(item => item.Tipo)" IsDefaultSortColumn="true" />
+                    <HxGridColumn TItem="Error" HeaderText="Descripción" ItemTextSelector="@(item => item.Mensaje)" SortKeySelector="@(item => item.Mensaje)" />
+                    <HxGridColumn TItem="Error" HeaderText="Sugerencia" ItemTextSelector="@(item => item.Sugerencia)" SortKeySelector="@(item => item.Sugerencia)" />
+                    <HxGridColumn TItem="Error" HeaderText="Campo" ItemTextSelector="@(item => item.Campo)" SortKeySelector="@(item => item.Campo)" />
+                    <HxGridColumn TItem="Error" HeaderText="Contenido" ItemTextSelector="@(item => item.Contenido)" SortKeySelector="@(item => item.Campo)" />                    
+                    <HxContextMenuGridColumn TItem="Error" Context="item">
+                        <HxContextMenu>
+                            <HxContextMenuItem Text="Eliminar" Icon="BootstrapIcon.Trash" OnClick="() => PMDeleteItem(item)" />
+                        </HxContextMenu>
+                    </HxContextMenuGridColumn>
+                </Columns>
+            </HxGrid>
+        </Content>
+	</HxTab>
+</HxTabPanel>
+
+<ComienzoEvaluacionDialog @ref="comienzoEvaluacionDialog" />
+<ArchivoAbiertoDialog @ref="archivoAbiertoDialog" />
+<PrimeraEvaluacionDialog @ref="primeraEvaluacionDialog" />
+<HxMessenger Position="ToastContainerPosition.BottomEnd" />
+
+@code {
+    public DocumentoService Documentos { get; set; }
+    public string[] filepaths { get; set; }
+    public string[] nombres { get; set; }
+    public List<Error> CDErrores { get; set; }
+    public List<Error> DDErrores { get; set; }
+    public List<Error> PMErrores { get; set; }
+
+    // Grid elements    
+    [Parameter]
+    public string TabId { get; set; }
+    private HxGrid<Error> CDgrid;
+    private HxGrid<Error> DDgrid;
+    private HxGrid<Error> PMgrid;
+
+    // Notificación de carga
+    private bool inProgress = false;
+
+    // Dialogos y alertas
+    ArchivoAbiertoDialog archivoAbiertoDialog;
+    ComienzoEvaluacionDialog comienzoEvaluacionDialog;
+    PrimeraEvaluacionDialog primeraEvaluacionDialog;
+    [Inject] protected IHxMessengerService Messenger { get; set; }
+
+    // Constructor
+    protected override void OnInitialized()
+    {
+        // Especifica que Tab ver si se ingresa por el NavBar
+        if (TabId == null) TabId = "ConjuntoDatos";
+        // Inicialización base de variables
+        Documentos = new DocumentoService();
+        CDErrores = new List<Error>();
+        DDErrores = new List<Error>();
+        PMErrores = new List<Error>();
+        // Recupera los filepaths de los archivos de error
+        filepaths = GetFilepathsErrores();     
+        // Recupera los filepaths de los documentos
+        nombres = GetFilepathsDocumentos();
+    }
+
+    // Toma los filepaths de los archivos de error
+    public string[] GetFilepathsErrores()
+    {
+        string[] temp = new string[3];
+        // Establece el path de donde se ubica la carpeta con los datos temporales
+        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "error_data");
+        // Recupera todos los reportes de error de los documentos
+        DirectoryInfo directoryInfo = new DirectoryInfo(path);
+        int count = 0;
+        if (directoryInfo.Exists)//check file exsit or not
+        {
+            System.IO.FileInfo[] files = directoryInfo.GetFiles();
+            if (files == null || files.Count() == 0) temp[0] = "-1";
+            else foreach (var file in files) temp[count++] = file.FullName;
+        }        
+        return temp;
+    }
+
+    // Toma los filepaths de los dcumentos ingresados
+    public string[] GetFilepathsDocumentos()
+    {
+        string[] temp = new string[3];
+        // Establece el path de donde se ubica la carpeta con los datos temporales
+        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "result_data");
+        // Recupera los nombres de todos los documentos ingreados
+        DirectoryInfo directoryInfo = new DirectoryInfo(path);
+        int count = 0;
+        if (directoryInfo.Exists)
+        {
+            System.IO.FileInfo[] files = directoryInfo.GetFiles();
+            if (files == null || files.Count() == 0) temp[0] = "-1";
+            else
+            {
+                foreach (var file in files) temp[count++] = file.FullName;
+                Documentos.EstablecerNombres(temp[0], temp[1], temp[2]);
+            }
+        }
+        return temp;
+    }
+
+    // Trae los datos de los errores de los docuemtnos de error
+    public void EstablecerErrores(string p_conjuntodatos, string p_diccionariodatos, string p_metadatos)
+    {
+        // Inicialización de variables
+        CDErrores = new List<Error>();
+        DDErrores = new List<Error>();
+        PMErrores = new List<Error>();
+        Error temp_error = new Error();
+        // Se establece el conjunto de datos
+        string[] lines = System.IO.File.ReadAllLines(p_conjuntodatos);
+        int count = 0;
+        foreach(var line in lines)
+        {
+            string[] temp = line.Split("|");         
+            string[] temp_2 = {temp[0], temp[1]};
+            if (count < 5)
+            {
+                temp_error = new Error("ConjuntoDatos", temp_2);
+                CDErrores.Add(temp_error);
+            }
+            else if (count == 5) Documentos.ConjuntoDatos.Columnas = temp[1];
+            else
+            {
+                temp_error = new Error("Columnas", temp_2);
+                CDErrores.Add(temp_error);
+            }
+            count++;
+        }
+        // Se establece el diccionario de datos
+        lines = System.IO.File.ReadAllLines(p_diccionariodatos);
+        foreach (var line in lines)
+        {
+            string[] temp = line.Split("|");
+            string[] temp_2 = { temp[2], temp[3] };
+            temp_error = new Error(temp[0], temp_2);
+            DDErrores.Add(temp_error);
+        }
+        // Se establece el metadato
+        lines = System.IO.File.ReadAllLines(p_metadatos);
+        foreach (var line in lines)
+        {
+            string[] temp = line.Split("|");
+            string[] temp_2 = { temp[2], temp[3] };
+            temp_error = new Error(temp[0], temp_2);
+            PMErrores.Add(temp_error);
+        }
+    }
+
+    // Datos para el Grid del conjunto de datos
+    private async Task<GridDataProviderResult<Error>> CDErrorsProvider(GridDataProviderRequest<Error> request)
+    {
+        // Tiempo de espera por defecto
+        await Task.Delay(1000);
+        if (filepaths[0] != "-1")
+        {
+            try
+            {
+                // Si no hay datos, se intenta añadirlos
+                if (CDErrores == null || CDErrores.Count() == 0) EstablecerErrores(filepaths[0], filepaths[1], filepaths[2]);              
+                // Se muestra el reporte
+                return new GridDataProviderResult<Error>
+                    {
+                        Data = CDErrores.Skip(request.StartIndex).Take(request.Count.Value).ToList(),
+                        TotalCount = CDErrores.Count
+                    };
+            }
+            catch
+            {
+                await HandleArchivoAbiertoDialog();
+            }            
+        }
+        // Por defecto
+        return new GridDataProviderResult<Error>
+            {
+                Data = null,
+                TotalCount = 0
+            };
+    }
+
+    // Datos para el Grid del diccionario de datos
+    private async Task<GridDataProviderResult<Error>> DDErrorsProvider(GridDataProviderRequest<Error> request)
+    {    
+        // Tiempo de espera por defecto
+        await Task.Delay(1000);
+        if (filepaths[0] != "-1")
+        {
+            try
+            {
+                // Si no hay datos, se intenta añadirlos
+                if (DDErrores == null || DDErrores.Count() == 0) EstablecerErrores(filepaths[0], filepaths[1], filepaths[2]);
+                // Se muestra el reporte
+                return new GridDataProviderResult<Error>
+                    {
+                        Data = DDErrores.Skip(request.StartIndex).Take(request.Count.Value).ToList(),
+                        TotalCount = DDErrores.Count
+                    };
+            }
+            catch
+            {
+                await HandleArchivoAbiertoDialog();
+            }
+        }
+        // Por defecto
+        return new GridDataProviderResult<Error>
+            {
+                Data = null,
+                TotalCount = 0
+            };
+    }
+
+    // Datos para el Grid del metadato
+    private async Task<GridDataProviderResult<Error>> PMErrorsProvider(GridDataProviderRequest<Error> request)
+    {
+        // Tiempo de espera por defecto
+        await Task.Delay(1000);
+        if (filepaths[0] != "-1")
+        {
+            try
+            {
+                // Si no hay datos, se intenta añadirlos
+                if (PMErrores == null || PMErrores.Count() == 0) EstablecerErrores(filepaths[0], filepaths[1], filepaths[2]);
+                // Se muestra el reporte
+                return new GridDataProviderResult<Error>
+                    {
+                        Data = PMErrores.Skip(request.StartIndex).Take(request.Count.Value).ToList(),
+                        TotalCount = PMErrores.Count
+                    };
+            }
+            catch
+            {
+                await HandleArchivoAbiertoDialog();
+            }
+        }
+        // Por defecto
+        return new GridDataProviderResult<Error>
+            {
+                Data = null,
+                TotalCount = 0
+            };
+    }
+
+    // Se elimina un elemento de la tabla del conjunto de datos
+    private async Task CDDeleteItem(Error item)
+    {
+        CDErrores.Remove(item);
+        await CDgrid.RefreshDataAsync();
+    }
+
+    // Se elimina un elemento de la tabla del diccionario de datos
+    private async Task DDDeleteItem(Error item)
+    {
+        DDErrores.Remove(item);
+        await DDgrid.RefreshDataAsync();
+    }
+
+    // Se elimina un elemento de la tabla del metadato
+    private async Task PMDeleteItem(Error item)
+    {
+        PMErrores.Remove(item);
+        await PMgrid.RefreshDataAsync();
+    }
+
+    // Abre el conjunto de datos como excel
+    public async void CDAbrir()
+    {
+        try
+        {
+            await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(nombres[0])
+                });
+        }
+        catch { await HandlePrimeraEvaluacionDialog(); }        
+    }
+
+    // Abre el diccionario de datos como excel
+    public async void DDAbrir()
+    {
+        try
+        {
+            await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(nombres[1])
+                });
+        }
+        catch { await HandlePrimeraEvaluacionDialog(); }
+    }
+
+    // Abre el metadato como excel
+    public async void PMAbrir()
+    {
+        try
+        {
+            await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(nombres[2])
+                });
+        }
+        catch { await HandlePrimeraEvaluacionDialog(); }
+    }
+
+    // Exporta el reporte de errores del conjunto de datos
+    public async Task<Task> CDExportar()
+    {
+        // Establece donde se va a guardar el documento
+        DateTime today_date = DateTime.Now;        
+        string error_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            $"ReporteConjuntoDatos_{today_date.Day}_{today_date.Month}_{today_date.Year}_{today_date.Hour}_{today_date.Minute}.txt");
+        string cd_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "error_data",
+            "CDerrors.txt"
+        );
+
+        // Tomamos los registros de errores del conjunto de datos
+        string[] lines = System.IO.File.ReadAllLines(cd_path);
+
+        // Crea el reporte de errores
+        using StreamWriter sw = new StreamWriter(error_path);        
+        sw.WriteLine("Reporte de errores del conjunto de datos");
+        sw.WriteLine($"Fecha: {today_date.ToString()}");
+        sw.WriteLine($"Nombre del documento: {nombres[0]}");
+        foreach(var iter in lines)
+        {
+            sw.WriteLine(iter);
+        }
+        sw.Close();
+
+        // Abre el documento .txt
+        try
+        {
+            await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(error_path)
+                });
+            InformarDescarga();
+        }
+        catch { await HandlePrimeraEvaluacionDialog(); }      
+        return Task.CompletedTask;
+    }
+
+    // Exporta el reporte de errores del conjunto de datos
+    public async Task<Task> DDExportar()
+    {
+        // Establece donde se va a guardar el documento
+        DateTime today_date = DateTime.Now;        
+        string error_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            $"ReporteDiccionarioDatos_{today_date.Day}_{today_date.Month}_{today_date.Year}_{today_date.Hour}_{today_date.Minute}.txt");
+
+        // Crea el reporte de errores
+        using StreamWriter sw = new StreamWriter(error_path);
+        sw.WriteLine("Reporte de errores del diccionario de datos");
+        sw.WriteLine($"Fecha: {today_date.ToString()}");
+        sw.WriteLine($"Nombre del documento: {nombres[1]}");
+        sw.WriteLine();
+        sw.WriteLine("ID del error|Tipo del error|Campo donde ocurrio el error|Contenido del campo|Mensaje de error|Sugerencia");
+        foreach(var iter in DDErrores)
+        {
+            sw.WriteLine(iter.GetError());
+        }
+        sw.Close();
+
+        // Abre el documento .txt
+        try
+        {
+            await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(error_path)
+                });
+            InformarDescarga();
+        }
+        catch { await HandlePrimeraEvaluacionDialog(); }        
+        return Task.CompletedTask;
+    }
+
+    // Exporta el reporte de errores del conjunto de datos
+    public async Task<Task> PMExportar()
+    {
+        // Establece donde se va a guardar el documento
+        DateTime today_date = DateTime.Now;
+        string error_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            $"ReporteMetadatos_{today_date.Day}_{today_date.Month}_{today_date.Year}_{today_date.Hour}_{today_date.Minute}.txt");
+
+        // Crea el reporte de errores
+        using StreamWriter sw = new StreamWriter(error_path);
+        sw.WriteLine("Reporte de errores del metadato");
+        sw.WriteLine($"Fecha: {today_date.ToString()}");
+        sw.WriteLine($"Nombre del documento: {nombres[2]}");
+        sw.WriteLine();
+        sw.WriteLine("ID del error|Tipo del error|Campo donde ocurrio el error|Contenido del campo|Mensaje de error|Sugerencia");
+        foreach (var iter in PMErrores)
+        {
+            sw.WriteLine(iter.GetError());
+        }
+        sw.Close();
+
+        // Abre el documento .txt
+        try
+        {
+            await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(error_path)
+                });
+            InformarDescarga();
+        }
+        catch { await HandlePrimeraEvaluacionDialog(); }
+        return Task.CompletedTask;
+    }
+
+    // Realiza la evaluación de los documentos
+    public async Task<Task> RealizarEvaluacion()
+    {        
+        // Se notifica que la evaluación de los archivos ha comenzado
+        if (await HandleComienzoEvaluacion() == true) 
+        {
+            // Borramos los datos de la carpeta result_data
+            // Establece el path de donde se ubica la carpeta con los datos temporales
+            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Datin Revisa",
+                "result_data");
+            try
+            {
+                // Establece información preliminar
+                Documentos.EstablecerNombres(nombres[0], nombres[1], nombres[2]);
+
+                // Genera documentos .txt con los resultados de la evaluación y la información de los documentos
+                await Documentos.GenerarEvaluacion(1);
+
+                // Nos trasladamos a la página de resultados de evaluación
+                string temp = Documentos.ConjuntoDatos.Nombre + "," + Documentos.DiccionarioDatos.Nombre + "," + Documentos.Metadatos.Nombre;
+                inProgress = false;
+                navigationManager.NavigateTo("/resultados", true);
+            }
+            catch (System.NullReferenceException) { await HandlePrimeraEvaluacionDialog(); }
+            catch { await HandleArchivoAbiertoDialog(); }
+        }         
+        return Task.CompletedTask;
+    }
+
+    private async Task<bool> HandleComienzoEvaluacion()
+    {
+        DialogResult<int> dialogResult = await comienzoEvaluacionDialog.ShowAsync();
+        if (dialogResult.Successful == true) return false;
+        return true;
+    }
+
+	private async Task HandleArchivoAbiertoDialog()
+	{
+		DialogResult<int> dialogResult = await archivoAbiertoDialog.ShowAsync();
+	}
+
+    private async Task HandlePrimeraEvaluacionDialog()
+    {
+        DialogResult<int> dialogResult = await primeraEvaluacionDialog.ShowAsync();
+    }
+
+    public void InformarDescarga()
+    {
+        Messenger.AddInformation(title: "Reporte descargado", message: "El reporte de error se ha descargado y colocado en su carpeta escritorio.");
+    }
+}

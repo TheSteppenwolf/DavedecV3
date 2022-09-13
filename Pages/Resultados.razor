@@ -1,0 +1,240 @@
+﻿@page "/resultados"
+@inherits LayoutComponentBase
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+@using DavedecV3.Components
+@using Data
+
+<h3>Resultados de la evaluación</h3>
+En esta sección podrás observar los resultados de la evaluación de los documentos seleccionados para posteriormente revisar su reporte de errores.
+<br />
+<br />
+<ResultadosQueHacerPrompt Title="¿No sabes qué hacer?" /><br />
+<HxProgressIndicator InProgress="@inProgress" />
+<HxButton Color="ThemeColor.Primary" OnClick="Descargar" Icon="BootstrapIcon.Download" IconPlacement="ButtonIconPlacement.End">Descargar documentos</HxButton><br /><br />
+<HxAccordion StayOpen="true">
+    <HxAccordionItem OnExpanded="OnExpanded" Id="0" @ref="CDItem">
+        <HeaderTemplate>Conjunto de datos | Estado de validación: ~<HxIcon Icon="@CDIcon"></HxIcon></HeaderTemplate>
+        <BodyTemplate>
+            <strong>Documento:</strong> @Documentos.ConjuntoDatos.Nombre <br /><br />
+            <strong>Estado:</strong> @CDEstado <HxIcon Icon="@CDIcon"></HxIcon> <br /><br />
+            <strong>Informe de errores:</strong>
+            <ul>
+                <li>Cantidad de registros: @Documentos.ConjuntoDatos.InformeGeneral.CantidadRegistros</li>
+                <li>Cantidad de errores: @Documentos.ConjuntoDatos.InformeGeneral.Cantidad</li>
+                <li>Proporción de errores: @Documentos.ConjuntoDatos.InformeGeneral.Proporcion</li>
+                <li>Cantidad de registros vacíos: @Documentos.ConjuntoDatos.InformeGeneral.Vacios</li>
+                <li>Cantidad de columnas: @Documentos.ConjuntoDatos.InformeGeneral.Columnas</li>
+            </ul>
+            <HxButton Text="Revisar errores" Color="ThemeColor.Primary" OnClick="RevisarErroresCD" Icon="BootstrapIcon.Check2Square" IconPlacement="ButtonIconPlacement.End" CssClass="display-3"/>
+        </BodyTemplate>        
+    </HxAccordionItem>
+    <HxAccordionItem OnExpanded="OnExpanded" Id="1" @ref="DDItem">
+        <HeaderTemplate>Diccionario de datos | Estado de validación: ~<HxIcon Icon="@DDIcon" /></HeaderTemplate>
+        <BodyTemplate>
+            <strong>Documento:</strong> @Documentos.DiccionarioDatos.Nombre <br /><br />
+            <strong>Estado:</strong> @DDEstado <HxIcon Icon="@DDIcon"></HxIcon><br /><br />
+            <strong>Informe de errores:</strong>
+            <ul>
+                <li>Cantidad de errores: @Documentos.DiccionarioDatos.Errores.Count</li>
+                <li>Proporción de errores: @Documentos.DiccionarioDatos.InformeGeneral.Proporcion</li>
+            </ul>
+            <HxButton Text="Revisar errores" Color="ThemeColor.Primary" OnClick="RevisarErroresDD" Icon="BootstrapIcon.Check2Square" IconPlacement="ButtonIconPlacement.End" CssClass="display-3" />
+        </BodyTemplate>
+    </HxAccordionItem>
+    <HxAccordionItem OnExpanded="OnExpanded" Id="2" @ref="PMItem">
+        <HeaderTemplate>Metadatos | Estado de validación: ~<HxIcon Icon="@PMIcon" /></HeaderTemplate>
+        <BodyTemplate>
+            <strong>Documento:</strong> @Documentos.Metadatos.Nombre <br /><br />
+            <strong>Estado:</strong> @PMEstado <HxIcon Icon="@PMIcon"></HxIcon> <br /><br />
+            <strong>Informe de errores:</strong>
+            <ul>
+                <li>Cantidad de errores: @Documentos.Metadatos.Errores.Count</li>
+                <li>Proporción de errores: @Documentos.Metadatos.InformeGeneral.Proporcion</li>
+            </ul>
+            <HxButton Text="Revisar errores" Color="ThemeColor.Primary" OnClick="RevisarErroresPM" Icon="BootstrapIcon.Check2Square" IconPlacement="ButtonIconPlacement.End" CssClass="display-3" />
+        </BodyTemplate>
+    </HxAccordionItem>
+</HxAccordion>
+
+<ArchivoAbiertoDialog @ref="archivoAbiertoDialog" />
+<HxMessenger Position="ToastContainerPosition.BottomEnd" />
+
+@code {
+    // Objeto de documentos
+    public DocumentoService Documentos { get; set; }
+    string[] filepaths { get; set; }
+
+    // Variables para modificar el GUI
+    private HxAccordionItem CDItem;
+    private HxAccordionItem DDItem;
+    private HxAccordionItem PMItem;
+    private IconBase CDIcon = BootstrapIcon.ExclamationTriangleFill;
+    private IconBase DDIcon = BootstrapIcon.ExclamationTriangleFill;
+    private IconBase PMIcon = BootstrapIcon.ExclamationTriangleFill;
+    private string CDEstado = "No definido";
+    private string DDEstado = "No definido";
+    private string PMEstado = "No definido";
+    private bool EstadoInicial = true;
+    public bool inProgress = false;
+
+    // Dialogos y advertencias
+    ArchivoAbiertoDialog archivoAbiertoDialog;
+    [Inject] protected IHxMessengerService Messenger { get; set; }
+
+
+    // Constrcutor
+    protected override void OnInitialized()
+    {
+        Documentos = new DocumentoService();        
+    }
+
+    // Método que se ejecuta cuando los elementos del GUI han sido renderizados
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if(CDItem != null && DDItem != null && PMItem != null)
+        {            
+            if(EstadoInicial == true)
+            {
+                CDItem.ExpandAsync();
+                DDItem.ExpandAsync();
+                PMItem.ExpandAsync();
+                EstadoInicial = false;
+            }            
+        }
+    }
+
+    // Establece los datos del item
+    protected async Task<Task> OnExpanded()
+    {
+        Documentos = new DocumentoService();
+        filepaths = await GetFilepaths();
+        // Establece los documento y los establece en la página
+        if (filepaths[0] != "-1")
+        {
+            try
+            {
+                Documentos.EstablecerDocumentos(filepaths[0], filepaths[1], filepaths[2]);
+            }
+            catch
+            {
+                await HandleArchivoAbiertoDialog();
+            }
+        }
+        // Evalua si existen errores en algún documento y modifica el GUI
+        if(Documentos.ConjuntoDatos.InformeGeneral.Cantidad != 0)
+        {
+            CDEstado = "El documento posee errores.";
+            CDIcon = BootstrapIcon.ExclamationTriangleFill;
+        }
+        else
+        {
+            CDEstado = "Sin errores en el documento.";
+            CDIcon = BootstrapIcon.CheckCircleFill;
+        }
+        if (Documentos.DiccionarioDatos.Errores.Count() != 0)
+        {
+            DDEstado = "El documento posee errores.";
+            DDIcon = BootstrapIcon.ExclamationTriangleFill;
+        }
+        else 
+        {
+            DDEstado = "Sin errores en el documento.";
+            DDIcon = BootstrapIcon.CheckCircleFill;
+        }
+        if (Documentos.Metadatos.Errores.Count() != 0)
+        {
+            PMEstado = "El documento posee errores.";
+            PMIcon = BootstrapIcon.ExclamationTriangleFill;
+        }
+        else 
+        {
+            PMEstado = "Sin errores en el documento.";
+            PMIcon = BootstrapIcon.CheckCircleFill;
+        }
+        return Task.CompletedTask;
+    }
+
+    // Toma los filepaths de los archivos
+    public async Task<string[]> GetFilepaths()
+    {
+        string[] nombres = new string[3];
+        // Establece el path de donde se ubica la carpeta con los datos temporales
+        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "result_data");
+        // Elimina los archivos del directorio y vuelve a crear el directorio
+        DirectoryInfo directoryInfo = new DirectoryInfo(path);
+        int count = 0;
+        if (directoryInfo.Exists)//check file exsit or not
+        {
+            try 
+            {
+                System.IO.FileInfo[] files = directoryInfo.GetFiles();
+                if (files == null || files.Count() == 0) nombres[0] = "-1";
+                else
+                {
+                    foreach (var file in files)
+                    {
+                        nombres[count++] = file.FullName;
+                    }
+                }
+            }    
+            catch { await HandleArchivoAbiertoDialog(); }
+        }        
+        return nombres;
+    }
+
+    public void RevisarErroresCD()
+    {        
+        navigationManager.NavigateTo("/errores/ConjuntoDatos");
+    }
+
+    public void RevisarErroresDD()
+    {
+        navigationManager.NavigateTo("/errores/DiccionarioDatos");
+    }
+
+    public void RevisarErroresPM()
+    {
+        navigationManager.NavigateTo("/errores/Metadatos");
+    }
+
+    // Descarga los documentos en el escritorio
+    public async Task<Task> Descargar()
+    {
+        // Establecemos donde guardar los documentos
+        string targetPath = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.Desktop));
+        // Tomamos únicamente los nombres de los documentos
+        string conjuntodatos = Documentos.ConjuntoDatos.Nombre.Split("\\")[Documentos.ConjuntoDatos.Nombre.Split("\\").Length-1];
+        string diccionariodatos = Documentos.DiccionarioDatos.Nombre.Split("\\")[Documentos.DiccionarioDatos.Nombre.Split("\\").Length-1];
+        string metadatos = Documentos.Metadatos.Nombre.Split("\\")[Documentos.Metadatos.Nombre.Split("\\").Length - 1];
+
+        // Ubicación de los archivos
+        string sourceCDFile = Documentos.ConjuntoDatos.Nombre;
+        string sourceDDFile = Documentos.DiccionarioDatos.Nombre;
+        string sourcePMFile = Documentos.Metadatos.Nombre;
+
+        // Ubicación de destino
+        string destCDFile = Path.Combine(targetPath, conjuntodatos);
+        string destDDFile = Path.Combine(targetPath, diccionariodatos);
+        string destPMFile = Path.Combine(targetPath, metadatos);
+
+        // Copiamos los archivos        
+        File.Copy(sourceCDFile, destCDFile, true);
+        File.Copy(sourceDDFile, destDDFile, true);
+        File.Copy(sourcePMFile, destPMFile, true);
+
+        InformarDescarga();
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleArchivoAbiertoDialog()
+    {
+        DialogResult<int> dialogResult = await archivoAbiertoDialog.ShowAsync();
+    }
+
+    public void InformarDescarga()
+    {
+        Messenger.AddInformation(title: "Documentos descargados", message: "Los documentos se han descargado y colocado en su carpeta escritorio.");
+    }
+}

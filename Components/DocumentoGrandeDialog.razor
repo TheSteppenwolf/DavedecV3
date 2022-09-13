@@ -1,0 +1,15 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Documento demasiado grande" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Warning">
+            El documento seleccionado es demasiado grande.<br />
+            ¿Estas seguro que deseas cargarlo?<br /><br/>
+            (Puede tardar un poco)
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+        <HxButton Text="Cancelar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsync(-1)" />
+    </FooterTemplate>
+</HxModal>

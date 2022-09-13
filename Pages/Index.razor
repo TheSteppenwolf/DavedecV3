@@ -1,0 +1,476 @@
+﻿@page "/"
+@inject Microsoft.AspNetCore.Components.NavigationManager navigationManager
+@using DavedecV3.Data
+@using DavedecV3.Components
+@using System.Text
+
+<h1>Selecciona tus documentos</h1>
+
+En esta sección podrás seleccionar tu conjunto de datos, diccionario de datos y metadatos, para su posterior evaluación.
+<br />
+<br />
+<GuiaPrompt Title="¿No sabes qué son estos documentos?" />
+
+<div class="flex-column">    
+    <EditForm Model="@Documentos">
+        <HxInputFile @ref="CDhxInputFileComponent" Label="Conjunto de datos" UploadUrl="/file-upload-streamed/" OnChange="CDHandleFileChange" />
+        <HxButton Text="Vaciar" Color="ThemeColor.Secondary" OnClick="@(async () => await CDhxInputFileComponent.ResetAsync())" Icon="BootstrapIcon.Trash" IconPlacement="ButtonIconPlacement.End" />        
+        <HxInputFile @ref="DDhxInputFileComponent" Label="Diccionario de datos" UploadUrl="/file-upload-streamed/" OnChange="DDHandleFileChange" />
+        <HxProgressIndicator  InProgress="@inProgress" />
+        <HxButton Text="Vaciar" Color="ThemeColor.Secondary" OnClick="@(async () => await DDhxInputFileComponent.ResetAsync())" Icon="BootstrapIcon.Trash" IconPlacement="ButtonIconPlacement.End" />
+        <HxInputFile @ref="PMhxInputFileComponent" Label="Metadatos" UploadUrl="/file-upload-streamed/" OnChange="PMHandleFileChange" />
+        <HxButton Text="Vaciar" Color="ThemeColor.Secondary" OnClick="@(async () => await PMhxInputFileComponent.ResetAsync())" Icon="BootstrapIcon.Trash" IconPlacement="ButtonIconPlacement.End" />
+        <HxSubmit Text="Confirmar y evaluar" Color="ThemeColor.Primary" OnClick="ValidarEntrada" Icon="BootstrapIcon.CheckCircleFill" IconPlacement="ButtonIconPlacement.End" />
+    </EditForm>
+</div>
+<NoSeleccionadoDialog @ref="noSeleccionadoDialog" />
+<CDNomenclaturaDialog @ref="CDnomenclaturaDialog" />
+<DDNomenclaturaDialog @ref="DDnomenclaturaDialog" />
+<PMNomenclaturaDialog @ref="PMnomenclaturaDialog" />
+<ComienzoEvaluacionDialog @ref="comienzoEvaluacionDialog" />
+<FormatoDialog @ref="formatoDialog" />
+<CargaCorrectaDialog @ref="cargaCorrectaDialog" />
+<CargaIncorrectaDialog @ref="cargaIncorrectaDialog" />
+<DocumentoGrandeDialog @ref="documentoGrandeDialog" />
+<ArchivoAbiertoDialog @ref="archivoAbiertoDialog"/>
+<ErrorInstalacionDialog @ref="errorInstalacionDialog"/>
+<br />
+
+@code {
+
+    // Procesamiento de entrada de archivos
+    private HxInputFile CDhxInputFileComponent;
+    private HxInputFile DDhxInputFileComponent;
+    private HxInputFile PMhxInputFileComponent;
+    private InputFileChangeEventArgs CDfileChanged;
+    private InputFileChangeEventArgs DDfileChanged;
+    private InputFileChangeEventArgs PMfileChanged;
+
+    // Notificación de carga
+    private bool inProgress = false;
+
+    // Alertas y notificaciones
+    NoSeleccionadoDialog noSeleccionadoDialog;
+    CDNomenclaturaDialog CDnomenclaturaDialog;
+    DDNomenclaturaDialog DDnomenclaturaDialog;
+    PMNomenclaturaDialog PMnomenclaturaDialog;
+    ComienzoEvaluacionDialog comienzoEvaluacionDialog;
+    FormatoDialog formatoDialog;
+    CargaCorrectaDialog cargaCorrectaDialog;
+    CargaIncorrectaDialog cargaIncorrectaDialog;
+    DocumentoGrandeDialog documentoGrandeDialog;
+    ArchivoAbiertoDialog archivoAbiertoDialog;
+    ErrorInstalacionDialog errorInstalacionDialog;
+
+    // Objeto de documentos
+    public DocumentoService Documentos { get; set; }
+
+    // Constrcutor
+    protected override void OnInitialized()
+    {
+        Documentos = new DocumentoService();
+        ResetData();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender) RevisarCarpetas();
+    }
+
+    // Revisa que las carpetas necesarias para el aplicativo existan, si no, las crea o genera un error
+    private async void RevisarCarpetas()
+    {
+        // Path de donde debería estar el directorio
+        var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa");
+
+        // Path de directorios críticos
+        var criticoPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "python");
+
+        // Path de directorios de funcionamiento
+        var tempPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data");
+        var errorPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "error_data");
+        var resultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "result_data");
+
+        // Evaluamos si existe la carpeta
+        DirectoryInfo directoryInfo = new DirectoryInfo(path);
+        if (directoryInfo.Exists)
+        {
+            // Comprobamos si existen los directorios críticos, por ejempo: python
+            DirectoryInfo criticoDir = new DirectoryInfo(criticoPath);
+            if (!criticoDir.Exists) await HandleFalloCritico();
+            else
+            {
+                // Comprobamos si existen carpetas para la funcionalidad del código, de no hacerlo se crean
+                DirectoryInfo tempDir = new DirectoryInfo(tempPath);
+                DirectoryInfo errorDir = new DirectoryInfo(errorPath);
+                DirectoryInfo resultDir = new DirectoryInfo(resultPath);
+                if (!tempDir.Exists) tempDir.Create();
+                if (!errorDir.Exists) errorDir.Create();
+                if (!resultDir.Exists) resultDir.Create();
+            }
+        }
+        else await HandleFalloCritico();
+    }
+
+    // Descarga el documento y carga en una carpeta definida
+    private async Task<bool> DownloadData(InputFileChangeEventArgs fileChanged, int tipo)
+    {        
+        bool respuesta = true;
+        bool retorno = false;        
+        // Verifica si el documento es bastante pesado
+        //if (fileChanged.File.Size > 10000000)
+        //{            
+        // Pregunta al usuario si desea continuar y notifica que puede demorar un poco
+        //respuesta = await HandleDocumentoGrandeDialog();                        
+        //}                
+        if (respuesta == true)
+        {                      
+            try
+            {
+                await SetData(fileChanged, tipo);
+                retorno = true;
+            }            
+            catch { }            
+        }                    
+        return retorno;
+    }
+
+    // Establece la información dentro del sistema
+    private async Task<Task> SetData(InputFileChangeEventArgs fileChanged, int tipo)
+    {        
+        inProgress = true;
+        string path = "";
+        string tipoPath = "";
+        // Conjunto de datos
+        if(tipo == 1)
+        {
+            // Borramos el contenido previo del mismo tipo
+            tipoPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data",
+            "temp_cd");
+            DirectoryInfo directoryInfo = new DirectoryInfo(tipoPath);
+            if (directoryInfo.Exists)//check file exsit or not
+            {
+                directoryInfo.Delete(true);
+            }
+            directoryInfo.Create();
+
+            // Establece el path donde se guardaron los datos y el nombre del archivo
+            path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data",
+            "temp_cd",
+            fileChanged.File.Name);
+        }
+        // Diccionario de datos
+        else if (tipo == 2)
+        {
+            // Borramos el contenido previo del mismo tipo
+            tipoPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data",
+            "temp_dd");
+            DirectoryInfo directoryInfo = new DirectoryInfo(tipoPath);
+            if (directoryInfo.Exists)//check file exsit or not
+            {
+                directoryInfo.Delete(true);
+            }
+            directoryInfo.Create();
+
+            // Establece el path donde se guardaron los datos y el nombre del archivo
+            path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data",
+            "temp_dd",
+            fileChanged.File.Name);
+        }
+        // Metadatos
+        else if (tipo == 3)
+        {
+            // Borramos el contenido previo del mismo tipo
+            tipoPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data",
+            "temp_pm");
+            DirectoryInfo directoryInfo = new DirectoryInfo(tipoPath);
+            if (directoryInfo.Exists)//check file exsit or not
+            {
+                directoryInfo.Delete(true);
+            }
+            directoryInfo.Create();
+
+            // Establece el path donde se guardaron los datos y el nombre del archivo
+            path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data",
+            "temp_pm",
+            fileChanged.File.Name);
+        }        
+
+        // Descarga y carga los documentos.
+        await using FileStream fs = new(path, FileMode.Create);
+        await fileChanged.File.OpenReadStream(1000000000000).CopyToAsync(fs);
+        inProgress = false;
+        return Task.CompletedTask;
+    }
+
+    // Elimina todos los archivos temporales de la carpeta especificada
+    private async void ResetData()
+    {        
+        inProgress = true;
+        // Establece el path de donde se ubica la carpeta con los datos temporales
+        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "temp_data");
+        // Elimina los archivos del directorio y vuelve a crear el directorio
+        try
+        {
+            DirectoryInfo directoryInfo = new DirectoryInfo(path);
+            if (directoryInfo.Exists)//check file exsit or not
+            {
+                directoryInfo.Delete(true);
+            }
+            directoryInfo.Create();
+        }
+        catch { await HandleArchivoAbiertoDialog(); }        
+        inProgress = false;
+    }
+
+    // Monitorea la entrada de un conjunto de datos
+    private async Task<Task> CDHandleFileChange(InputFileChangeEventArgs fileChanged)
+    {
+        // Si se borra la selección o no se selecciona nada
+        this.CDfileChanged = fileChanged.FileCount > 0 ? fileChanged : null;
+        if (CDfileChanged != null)
+        {         
+            // Descarga de archivos
+            bool temp_resultado = await DownloadData(fileChanged, 1);            
+
+            if (temp_resultado == true)
+            {                
+                // Si el documento no sigue la nomenclatura para el documento
+                if (CDfileChanged != null && !Documentos.VerificarNomenclatura(1, CDfileChanged.File.Name))
+                {
+                    // Si el documento se encuentra en un formato inválido
+                    if (!Documentos.VerificarFormato(CDfileChanged.File.Name)) await HandleFormatoDialog();
+                    else await HandleCDNomneclatura();
+                    await CDhxInputFileComponent.ResetAsync();
+                }
+                else
+                {
+                    // Se guarda el filepath del documento cargado
+                    Documentos.ConjuntoDatos.EstablecerFilePath(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        "Datin Revisa",
+                        "temp_data",
+                        "temp_cd",
+                        fileChanged.File.Name)
+                    );
+                    // Notifica de carga correcta si el documento es mayor a 512000
+                    if (fileChanged.File.Size > 512000) await HandleCargaCorrectaDialog();
+                }                
+            }
+            else await HandleCargaIncorrectaDialog();
+        }
+        return Task.CompletedTask;
+    }
+
+    // Monitorea la entrada de un diccionario de datos
+    private async Task<Task> DDHandleFileChange(InputFileChangeEventArgs fileChanged)
+    {
+        // Si se borra la selección o no se selecciona nada
+        this.DDfileChanged = fileChanged.FileCount > 0 ? fileChanged : null;
+        if (DDfileChanged != null)
+        {
+            // Descarga de archivos
+
+            bool temp_resultado = await DownloadData(fileChanged, 2);
+
+            if (temp_resultado == true)
+            {
+                // Si el documento no sigue la nomenclatura para el documento
+                if (DDfileChanged != null && !Documentos.VerificarNomenclatura(2, DDfileChanged.File.Name))
+                {
+                    // Si el documento se encuentra en un formato inválido
+                    if (!Documentos.VerificarFormato(DDfileChanged.File.Name)) await HandleFormatoDialog();
+                    else await HandleDDNomneclatura();
+                    await DDhxInputFileComponent.ResetAsync();
+                }
+                else
+                {
+                    // Se guarda el filepath del documento cargado
+                    Documentos.DiccionarioDatos.EstablecerFilePath(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        "Datin Revisa",
+                        "temp_data",
+                        "temp_dd",
+                        fileChanged.File.Name)
+                    );
+                    // Notifica de carga correcta si el documento es mayor a 512000
+                    if (fileChanged.File.Size > 512000) await HandleCargaCorrectaDialog();
+                }                
+            }
+            else await HandleCargaIncorrectaDialog();
+        }
+        return Task.CompletedTask;
+    }
+
+    // Monitorea la entrada de un metadato
+    private async Task<Task> PMHandleFileChange(InputFileChangeEventArgs fileChanged)
+    {
+        // Si se borra la selección o no se selecciona nada
+        this.PMfileChanged = fileChanged.FileCount > 0 ? fileChanged : null;
+        if (PMfileChanged != null)
+        {
+            // Descarga de archivos
+            bool temp_resultado = await DownloadData(fileChanged, 3);
+
+            if (temp_resultado == true)
+            {
+                // Si el documento no sigue la nomenclatura para el documento
+                if (PMfileChanged != null && !Documentos.VerificarNomenclatura(3, PMfileChanged.File.Name))
+                {
+                    // Si el documento se encuentra en un formato inválido
+                    if (!Documentos.VerificarFormato(PMfileChanged.File.Name)) await HandleFormatoDialog();
+                    else await HandlePMNomneclatura();
+                    await PMhxInputFileComponent.ResetAsync();
+                }
+                else
+                {
+                    // Se guarda el filepath del documento cargado
+                    Documentos.Metadatos.EstablecerFilePath(
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                        "Datin Revisa",
+                        "temp_data",
+                        "temp_pm",
+                        fileChanged.File.Name)
+                    );
+                    // Notifica de carga correcta si el documento es mayor a 512000
+                    if (fileChanged.File.Size > 512000) await HandleCargaCorrectaDialog();
+                }                
+            }
+            else await HandleCargaIncorrectaDialog();
+        }
+        return Task.CompletedTask;
+    }    
+
+    // Valida que todos los documentos hayan sido seleccionados
+    private async Task<Task> ValidarEntrada()
+    {        
+        if (CDfileChanged != null && DDfileChanged != null && PMfileChanged != null)
+        {
+            // Pregunta al usuario si esta seguro de ejecutar la evaluación            
+            if (await HandleComienzoEvaluacion() == true)
+            {
+                inProgress = true;
+                await GenerarExcels();
+            }
+            else inProgress = false;
+        }
+        else await HandleNoSeleccionado();
+        inProgress = false;
+        return Task.CompletedTask;
+    }
+
+    // Genera excels de los documentos ingresados sin importar que tipo sean
+    private async Task GenerarExcels()
+    {
+        // Borramos los datos de la carpeta result_data
+        // Establece el path de donde se ubica la carpeta con los datos temporales
+        string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Datin Revisa",
+            "result_data");
+        try
+        {
+            // Elimina los archivos del directorio y vuelve a crear el directorio
+            DirectoryInfo directoryInfo = new DirectoryInfo(path);
+            if (directoryInfo.Exists) directoryInfo.Delete(true);
+            directoryInfo.Create();
+
+            // Establece información preliminar
+            Documentos.EstablecerNombres(CDfileChanged.File.Name, DDfileChanged.File.Name, PMfileChanged.File.Name);
+
+            // Genera documentos .txt con los resultados de la evaluación y la información de los documentos
+            await Documentos.GenerarEvaluacion();
+            inProgress = false;
+
+            // Nos trasladamos a la página de resultados de evaluación
+            string temp = Documentos.ConjuntoDatos.Nombre + "," + Documentos.DiccionarioDatos.Nombre + "," + Documentos.Metadatos.Nombre;
+            navigationManager.NavigateTo("/resultados", true);
+        }
+        catch { await HandleArchivoAbiertoDialog(); }        
+    }
+
+    // Dialogo de alerta: Faltan documentos por seleccionar
+    private async Task HandleNoSeleccionado()
+    {
+        DialogResult<int> dialogResult = await noSeleccionadoDialog.ShowAsync();
+    }
+
+    // Dialogo de alerta: Error de nomenclatura del conjunto de datos
+    private async Task HandleCDNomneclatura()
+    {
+        DialogResult<int> dialogResult = await CDnomenclaturaDialog.ShowAsync();
+    }
+
+    // Dialogo de alerta: Error de nomenclatura del diccionario de datos
+    private async Task HandleDDNomneclatura()
+    {
+        DialogResult<int> dialogResult = await DDnomenclaturaDialog.ShowAsync();
+    }
+
+    // Dialogo de alerta: Error de nomenclatura del metadato
+    private async Task HandlePMNomneclatura()
+    {
+        DialogResult<int> dialogResult = await PMnomenclaturaDialog.ShowAsync();
+    }
+
+    private async Task<bool> HandleComienzoEvaluacion()
+    {
+        DialogResult<int> dialogResult = await comienzoEvaluacionDialog.ShowAsync();
+        if (dialogResult.Successful == true) return false;
+        return true;
+    }
+
+    private async Task HandleFormatoDialog()
+    {
+        DialogResult<int> dialogResult = await formatoDialog.ShowAsync();
+    }
+
+    private async Task HandleCargaCorrectaDialog()
+    {
+        DialogResult<int> dialogResult = await cargaCorrectaDialog.ShowAsync();
+    }
+
+    private async Task HandleCargaIncorrectaDialog()
+    {
+        DialogResult<int> dialogResult = await cargaIncorrectaDialog.ShowAsync();
+    }
+    
+    private async Task<bool> HandleDocumentoGrandeDialog()
+    {
+        DialogResult<int> dialogResult = await documentoGrandeDialog.ShowAsync();
+        if (dialogResult.Successful == true) return false;
+        return true;
+    }
+
+    private async Task HandleArchivoAbiertoDialog()
+    {
+        DialogResult<int> dialogResult = await archivoAbiertoDialog.ShowAsync();        
+    }
+
+    private async Task HandleFalloCritico()
+    {
+        DialogResult<int> dialogResult = await errorInstalacionDialog.ShowAsync();
+    }
+}

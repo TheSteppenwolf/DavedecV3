@@ -1,0 +1,47 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+	<div class="sidebar">
+		<NavMenu />
+	</div>
+
+	<main>
+		<div class="top-row px-4">
+			<a href="@GuiaPath" target="_blank" onclick="@GetMasInformacion">Guía de usuario</a>
+			<a href="https://www.datosabiertos.gob.ec/normativa/guia-de-datos-abiertos/" target="_blank">Normativa</a>
+			<a href="@GuiaPath" target="_blank" onclick="@GetPlantillas">Plantillas</a>
+			<a href="https://www.datosabiertos.gob.ec/" target="_blank">Acerca de</a>
+		</div>
+
+		<article class="content px-4">
+			@Body
+		</article>
+	</main>
+</div>
+
+@code{
+    private string GuiaPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                "Datin Revisa",
+                "Guías",
+                "GuíaUsuario.pdf");
+    private string PlantillaPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+        "Datin Revisa",
+        "Guías",
+        "PlantillasDatosAbiertos.pdf");
+
+    public async void GetMasInformacion()
+    {
+        await Launcher.OpenAsync(new OpenFileRequest
+        {
+            File = new ReadOnlyFile(GuiaPath)
+        });
+    }
+
+	public async void GetPlantillas()
+    {
+        await Launcher.OpenAsync(new OpenFileRequest
+        {
+            File = new ReadOnlyFile(PlantillaPath)
+        });
+    }
+}

@@ -1,0 +1,13 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Fallo crítico" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Danger">
+            Hubo un fallo crítico en la aplicación.<br /><br />
+            Se requiere una reinstalación del aplicativo.
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>

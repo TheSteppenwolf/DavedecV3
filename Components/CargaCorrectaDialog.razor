@@ -1,0 +1,12 @@
+﻿@inherits HxDialogBase<int>
+
+<HxModal Title="Carga de datos sin errores" @ref="modal">
+    <BodyTemplate>
+        <HxAlert Color="ThemeColor.Success">
+            ¡El documento seleccionado ha sido cargado con exito!
+        </HxAlert>
+    </BodyTemplate>
+    <FooterTemplate>
+        <HxButton Text="Aceptar" Color="ThemeColor.Secondary" OnClick="async() => await HideAsCancelledAsync()" />
+    </FooterTemplate>
+</HxModal>
